@@ -1,4 +1,4 @@
-name: Build Windows Executables
+name: 'Build Windows Executables'
 
 on:
   push:
@@ -6,11 +6,6 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (optional)'
-        required: false
-        default: 'latest'
 
 jobs:
   build-windows:
