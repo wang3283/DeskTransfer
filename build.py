@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-DeskTransfer 跨平台打包脚本
-自动化构建独立的桌面可执行文件
-支持Windows、macOS、Linux
+DeskTransfer Cross-Platform Build Script
+Automated building of standalone desktop executables
+Supports Windows, macOS, Linux
 """
 import os
 import sys
@@ -20,88 +20,88 @@ class DeskTransferBuilder:
         self.output_dir = self.dist_dir / 'DeskTransfer'
         self.version = "1.0.0"
 
-        # 检测平台
+        # Detect platform
         import platform
         self.platform = platform.system().lower()
         self.arch = platform.machine().lower()
 
-        # 设置平台特定的文件名后缀
+        # Set platform-specific file extensions
         if self.platform == 'windows':
             self.exe_suffix = '.exe'
             self.script_suffix = '.bat'
         else:
             self.exe_suffix = ''
             self.script_suffix = '.sh'
-        
+
     def log(self, message, level="INFO"):
-        """打印日志"""
+        """Print log message"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"[{timestamp}] [{level}] {message}")
-        
+
     def check_python(self):
-        """检查Python环境"""
-        self.log("检查Python环境...")
+        """Check Python environment"""
+        self.log("Checking Python environment...")
         python_version = sys.version_info
         if python_version.major < 3 or (python_version.major == 3 and python_version.minor < 6):
-            self.log("需要Python 3.6或更高版本！", "ERROR")
+            self.log("Python 3.6 or higher is required!", "ERROR")
             return False
-        self.log(f"Python版本: {sys.version.split()[0]}")
+        self.log(f"Python version: {sys.version.split()[0]}")
         return True
-        
+
     def install_dependencies(self):
-        """安装打包依赖"""
-        self.log("安装打包依赖...")
+        """Install build dependencies"""
+        self.log("Installing build dependencies...")
         try:
-            # 升级pip
+            # Upgrade pip
             subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
-            # 安装PyInstaller
+
+            # Install PyInstaller
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
-            # 安装项目依赖
+
+            # Install project dependencies
             subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
-            self.log("依赖安装完成")
+
+            self.log("Dependencies installed successfully")
             return True
         except subprocess.CalledProcessError as e:
-            self.log(f"依赖安装失败: {e}", "ERROR")
+            self.log(f"Failed to install dependencies: {e}", "ERROR")
             return False
-            
+
     def clean_build(self):
-        """清理之前的构建文件"""
-        self.log("清理旧的构建文件...")
+        """Clean previous build files"""
+        self.log("Cleaning old build files...")
         if self.build_dir.exists():
             shutil.rmtree(self.build_dir)
         if self.dist_dir.exists():
             shutil.rmtree(self.dist_dir)
-        self.log("清理完成")
-        
-    def build_executables(self):
-        """构建可执行文件"""
-        self.log("开始构建可执行文件...")
+        self.log("Cleanup completed")
 
-        # 构建发送端
+    def build_executables(self):
+        """Build executable files"""
+        self.log("Starting executable build...")
+
+        # Build sender
         if not self._build_single_executable('sender.py', 'DeskTransfer-Sender'):
             return False
 
-        # 构建接收端
+        # Build receiver
         if not self._build_single_executable('receiver.py', 'DeskTransfer-Receiver'):
             return False
 
-        self.log("可执行文件构建成功")
+        self.log("Executable build completed successfully")
         return True
 
     def _build_single_executable(self, script_file, exe_name):
-        """构建单个可执行文件"""
+        """Build single executable"""
         try:
             cmd = [
                 sys.executable, '-m', 'PyInstaller',
                 '--clean',
                 '--noconfirm',
-                '--onedir',  # 生成目录而不是单文件
+                '--onedir',
                 '--name', exe_name,
                 '--hidden-import', 'tkinterdnd2',
                 '--hidden-import', 'tkinterdnd2.tkdnd',
@@ -131,12 +131,12 @@ class DeskTransferBuilder:
                 '--exclude-module', 'unittest',
                 '--exclude-module', 'doctest',
                 '--exclude-module', 'pydoc',
-                '--noupx',  # 禁用UPX压缩以提高兼容性
-                '--noconsole',  # GUI应用，不显示控制台窗口
+                '--noupx',
+                '--noconsole',
                 script_file
             ]
 
-            # 添加平台特定的选项
+            # Add platform-specific options
             if self.platform == 'windows':
                 if (self.root_dir / 'assets' / 'icon.ico').exists():
                     cmd.extend(['--icon', str(self.root_dir / 'assets' / 'icon.ico')])
@@ -145,79 +145,79 @@ class DeskTransferBuilder:
             return True
 
         except subprocess.CalledProcessError as e:
-            self.log(f"构建 {exe_name} 失败: {e}", "ERROR")
+            self.log(f"Failed to build {exe_name}: {e}", "ERROR")
             return False
-            
+
     def create_distribution_package(self):
-        """创建发布包"""
-        self.log("创建发布包...")
-        
-        # 创建输出目录
+        """Create distribution package"""
+        self.log("Creating distribution package...")
+
+        # Create output directory
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 检查新格式的输出（COLLECT模式）
+
+        # Check new format output (COLLECT mode)
         sender_dir = self.dist_dir / 'DeskTransfer-Sender'
         receiver_dir = self.dist_dir / 'DeskTransfer-Receiver'
-        
-        # 复制发送端文件
+
+        # Copy sender files
         if sender_dir.exists():
-            self.log("复制发送端文件...")
+            self.log("Copying sender files...")
             for item in sender_dir.iterdir():
                 if item.is_file():
                     shutil.copy2(item, self.output_dir)
                     if item.suffix == '.exe':
-                        self.log(f"复制: {item.name}")
+                        self.log(f"Copied: {item.name}")
                 elif item.is_dir():
                     shutil.copytree(item, self.output_dir / item.name, dirs_exist_ok=True)
         else:
-            # 兼容旧格式（单文件exe）
+            # Compatible with old format (single exe)
             sender_exe = self.dist_dir / 'DeskTransfer-Sender.exe'
             if sender_exe.exists():
                 shutil.copy(sender_exe, self.output_dir)
-                self.log(f"复制: {sender_exe.name}")
+                self.log(f"Copied: {sender_exe.name}")
             else:
-                self.log("警告: 未找到发送端可执行文件", "WARNING")
-        
-        # 复制接收端文件
+                self.log("Warning: Sender executable not found", "WARNING")
+
+        # Copy receiver files
         if receiver_dir.exists():
-            self.log("复制接收端文件...")
+            self.log("Copying receiver files...")
             for item in receiver_dir.iterdir():
                 if item.is_file():
                     dest_file = self.output_dir / item.name
-                    if not dest_file.exists():  # 避免覆盖已有文件
+                    if not dest_file.exists():  # Avoid overwriting
                         shutil.copy2(item, self.output_dir)
                     if item.suffix == '.exe':
-                        self.log(f"复制: {item.name}")
+                        self.log(f"Copied: {item.name}")
                 elif item.is_dir():
                     shutil.copytree(item, self.output_dir / item.name, dirs_exist_ok=True)
         else:
-            # 兼容旧格式（单文件exe）
+            # Compatible with old format (single exe)
             receiver_exe = self.dist_dir / 'DeskTransfer-Receiver.exe'
             if receiver_exe.exists():
                 shutil.copy(receiver_exe, self.output_dir)
-                self.log(f"复制: {receiver_exe.name}")
+                self.log(f"Copied: {receiver_exe.name}")
             else:
-                self.log("警告: 未找到接收端可执行文件", "WARNING")
-        
-        # 创建data目录
+                self.log("Warning: Receiver executable not found", "WARNING")
+
+        # Create data directory
         data_dir = self.output_dir / 'data'
         data_dir.mkdir(exist_ok=True)
         (data_dir / 'received').mkdir(exist_ok=True)
         (data_dir / 'temp').mkdir(exist_ok=True)
-        
-        # 创建启动脚本
+
+        # Create start script
         self.create_start_script()
-        
-        # 创建README文件
+
+        # Create README file
         self.create_readme()
-        
-        # 复制文档
+
+        # Copy documentation
         self.copy_documentation()
-        
-        self.log("发布包创建完成")
-        
+
+        self.log("Distribution package created successfully")
+
     def create_start_script(self):
-        """创建启动脚本"""
+        """Create start script"""
         if self.platform == 'windows':
             start_content = self._create_windows_start_script()
         else:
@@ -226,51 +226,51 @@ class DeskTransferBuilder:
         start_script_path = self.output_dir / f'start{self.script_suffix}'
         with open(start_script_path, 'w', encoding='utf-8') as f:
             f.write(start_content)
-        self.log(f"创建启动脚本: start{self.script_suffix}")
+        self.log(f"Created start script: start{self.script_suffix}")
 
     def _create_windows_start_script(self):
-        """创建Windows批处理启动脚本"""
+        """Create Windows batch start script"""
         return """@echo off
 chcp 65001 >nul
-title DeskTransfer - 局域网图片传输工具
+title DeskTransfer - LAN Image Transfer Tool
 color 0A
 
 :menu
 cls
 echo ========================================
 echo    DeskTransfer v1.0.0
-echo    局域网图片传输工具
+echo    LAN Image Transfer Tool
 echo ========================================
 echo.
-echo    1. 启动接收端 (Receiver)
-echo    2. 启动发送端 (Sender)
-echo    3. 打开接收文件夹
-echo    4. 查看使用说明
-echo    5. 退出
+echo    1. Start Receiver
+echo    2. Start Sender
+echo    3. Open Received Folder
+echo    4. View Instructions
+echo    5. Exit
 echo.
 echo ========================================
 
-set /p choice=请选择操作 (1-5):
+set /p choice=Select option (1-5):
 
 if "%choice%"=="1" (
     echo.
-    echo 正在启动接收端...
+    echo Starting Receiver...
     start "" "DeskTransfer-Receiver.exe"
     timeout /t 2 >nul
     goto menu
 ) else if "%choice%"=="2" (
     echo.
-    echo 正在启动发送端...
+    echo Starting Sender...
     start "" "DeskTransfer-Sender.exe"
     timeout /t 2 >nul
     goto menu
 ) else if "%choice%"=="3" (
     echo.
-    echo 正在打开接收文件夹...
+    echo Opening received folder...
     if exist "data\\received" (
         explorer "data\\received"
     ) else (
-        echo 接收文件夹不存在，正在创建...
+        echo Received folder does not exist, creating...
         mkdir "data\\received"
         explorer "data\\received"
     )
@@ -279,86 +279,86 @@ if "%choice%"=="1" (
 ) else if "%choice%"=="4" (
     if exist "README.txt" (
         notepad "README.txt"
-    ) else if exist "使用说明.txt" (
-        notepad "使用说明.txt"
+    ) else if exist "Instructions.txt" (
+        notepad "Instructions.txt"
     ) else (
-        echo 未找到使用说明文件
+        echo Instructions file not found
         pause
     )
     goto menu
 ) else if "%choice%"=="5" (
     echo.
-    echo 谢谢使用！
+    echo Thank you for using!
     timeout /t 1 >nul
     exit
 ) else (
     echo.
-    echo 无效选择，请重新选择！
+    echo Invalid choice, please try again!
     timeout /t 2 >nul
     goto menu
 )
 """
 
     def _create_unix_start_script(self):
-        """创建Unix shell启动脚本"""
+        """Create Unix shell start script"""
         return """#!/bin/bash
 
-# DeskTransfer 启动脚本
-# 支持macOS和Linux
+# DeskTransfer Startup Script
+# Supports macOS and Linux
 
 show_menu() {
     clear
     echo "========================================"
     echo "    DeskTransfer v1.0.0"
-    echo "    局域网图片传输工具"
+    echo "    LAN Image Transfer Tool"
     echo "========================================"
     echo ""
-    echo "    1. 启动接收端 (Receiver)"
-    echo "    2. 启动发送端 (Sender)"
-    echo "    3. 打开接收文件夹"
-    echo "    4. 查看使用说明"
-    echo "    5. 退出"
+    echo "    1. Start Receiver"
+    echo "    2. Start Sender"
+    echo "    3. Open Received Folder"
+    echo "    4. View Instructions"
+    echo "    5. Exit"
     echo ""
     echo "========================================"
 }
 
-# 创建接收文件夹（如果不存在）
+# Create received folder if it doesn't exist
 ensure_received_dir() {
     if [ ! -d "data/received" ]; then
         mkdir -p "data/received"
-        echo "接收文件夹已创建"
+        echo "Received folder created"
     fi
 }
 
-# 主菜单循环
+# Main menu loop
 while true; do
     show_menu
-    read -p "请选择操作 (1-5): " choice
+    read -p "Select option (1-5): " choice
 
     case $choice in
         1)
             echo ""
-            echo "正在启动接收端..."
+            echo "Starting Receiver..."
             if [ -f "./DeskTransfer-Receiver" ]; then
                 ./DeskTransfer-Receiver &
             else
-                echo "错误：找不到接收端可执行文件"
-                read -p "按回车键继续..."
+                echo "Error: Receiver executable not found"
+                read -p "Press Enter to continue..."
             fi
             ;;
         2)
             echo ""
-            echo "正在启动发送端..."
+            echo "Starting Sender..."
             if [ -f "./DeskTransfer-Sender" ]; then
                 ./DeskTransfer-Sender &
             else
-                echo "错误：找不到发送端可执行文件"
-                read -p "按回车键继续..."
+                echo "Error: Sender executable not found"
+                read -p "Press Enter to continue..."
             fi
             ;;
         3)
             echo ""
-            echo "正在打开接收文件夹..."
+            echo "Opening received folder..."
             ensure_received_dir
             if command -v open >/dev/null 2>&1; then
                 # macOS
@@ -367,8 +367,8 @@ while true; do
                 # Linux
                 xdg-open "data/received"
             else
-                echo "无法自动打开文件夹，请手动打开 data/received 目录"
-                read -p "按回车键继续..."
+                echo "Cannot open folder automatically, please manually open data/received directory"
+                read -p "Press Enter to continue..."
             fi
             ;;
         4)
@@ -380,165 +380,165 @@ while true; do
                 else
                     cat "README.txt" | less
                 fi
-            elif [ -f "使用说明.txt" ]; then
+            elif [ -f "Instructions.txt" ]; then
                 if command -v open >/dev/null 2>&1; then
-                    open "使用说明.txt"
+                    open "Instructions.txt"
                 elif command -v xdg-open >/dev/null 2>&1; then
-                    xdg-open "使用说明.txt"
+                    xdg-open "Instructions.txt"
                 else
-                    cat "使用说明.txt" | less
+                    cat "Instructions.txt" | less
                 fi
             else
-                echo "未找到使用说明文件"
-                read -p "按回车键继续..."
+                echo "Instructions file not found"
+                read -p "Press Enter to continue..."
             fi
             ;;
         5)
             echo ""
-            echo "谢谢使用！"
+            echo "Thank you for using!"
             exit 0
             ;;
         *)
             echo ""
-            echo "无效选择，请重新选择！"
-            read -p "按回车键继续..."
+            echo "Invalid choice, please try again!"
+            read -p "Press Enter to continue..."
             ;;
     esac
 done
 """
-        
+
     def create_readme(self):
-        """创建README文件"""
-        readme_content = """# DeskTransfer - 局域网图片传输工具
+        """Create README file"""
+        readme_content = """# DeskTransfer - LAN Image Transfer Tool
 
-## 版本信息
-版本: v1.0.0
-发布日期: """ + datetime.now().strftime("%Y-%m-%d") + """
+## Version Info
+Version: v1.0.0
+Release Date: """ + datetime.now().strftime("%Y-%m-%d") + """
 
-## 快速开始
+## Quick Start
 
-### 方式一：使用启动脚本（推荐）
-1. 双击运行 `start.bat`
-2. 根据菜单选择：
-   - 选择 1 启动接收端
-   - 选择 2 启动发送端
-   - 选择 3 打开接收文件夹
-   - 选择 4 查看使用说明
+### Method 1: Using Start Script (Recommended)
+1. Double-click `start.bat` to run
+2. Select from menu:
+   - Choose 1 to start Receiver
+   - Choose 2 to start Sender
+   - Choose 3 to open received folder
+   - Choose 4 to view instructions
 
-### 方式二：直接运行
-1. 双击 `DeskTransfer-Receiver.exe` 启动接收端
-2. 双击 `DeskTransfer-Sender.exe` 启动发送端
+### Method 2: Direct Run
+1. Double-click `DeskTransfer-Receiver.exe` to start receiver
+2. Double-click `DeskTransfer-Sender.exe` to start sender
 
-## 使用步骤
+## Usage Steps
 
-### 1. 启动接收端
-- 在接收端电脑上运行接收端程序
-- 点击"启动服务器"按钮
-- 记录显示的IP地址和端口号（默认：12345）
+### 1. Start Receiver
+- Run receiver program on receiving computer
+- Click "Start Server" button
+- Record displayed IP address and port (default: 12345)
 
-### 2. 启动发送端
-- 在发送端电脑上运行发送端程序
-- 输入接收端的IP地址
-- 端口号保持默认（12345）或输入接收端显示的端口
+### 2. Start Sender
+- Run sender program on sending computer
+- Enter receiver's IP address
+- Port remains default (12345) or enter receiver's displayed port
 
-### 3. 传输文件
-- 在发送端点击"选择文件"按钮，选择要传输的图片
-- 支持多选，可以批量传输
-- 点击"连接"按钮连接到接收端
-- 连接成功后，点击"发送文件"开始传输
-- 传输过程中会显示进度条
+### 3. Transfer Files
+- Click "Select Files" in sender, choose images
+- Supports multi-select for batch transfer
+- Click "Connect" to connect to receiver
+- After successful connection, click "Send Files" to start transfer
+- Progress bar shows transfer status
 
-### 4. 查看接收的文件
-- 接收的文件保存在 `data/received` 目录
-- 可以在接收端界面点击"打开接收文件夹"按钮
-- 或使用启动脚本的菜单选项3
+### 4. View Received Files
+- Received files are stored in `data/received` directory
+- Click "Open Received Folder" button in receiver interface
+- Or use start script menu option 3
 
-## 功能特点
+## Features
 
-- ✅ 支持局域网内快速传输图片
-- ✅ 支持批量选择和传输
-- ✅ 实时显示传输进度
-- ✅ 支持常见图片格式（JPG、PNG、GIF、BMP、TIFF、WebP）
-- ✅ 简洁易用的图形界面
-- ✅ 无需安装Python环境
+- ✅ Fast LAN transfer of images
+- ✅ Batch file selection and transfer
+- ✅ Real-time transfer progress display
+- ✅ Support for common image formats (JPG, PNG, GIF, BMP, TIFF, WebP)
+- ✅ Simple and intuitive GUI
+- ✅ No Python environment required
 
-## 系统要求
+## System Requirements
 
-- 操作系统: Windows 7 或更高版本
-- 网络: 发送端和接收端需在同一局域网内
-- 防火墙: 需允许TCP端口12345通信
+- Operating System: Windows 7 or higher
+- Network: Sender and receiver must be on same LAN
+- Firewall: Allow TCP port 12345 communication
 
-## 注意事项
+## Important Notes
 
-1. **网络连接**
-   - 确保两台电脑在同一局域网内
-   - 可以通过ping命令测试网络连通性
+1. **Network Connection**
+   - Ensure both computers are on the same LAN
+   - Test network connectivity using ping command
 
-2. **防火墙设置**
-   - Windows防火墙可能会阻止连接
-   - 首次运行时，请允许程序通过防火墙
-   - 默认使用TCP端口12345
+2. **Firewall Settings**
+   - Windows Firewall may block connections
+   - Allow program through firewall on first run
+   - Default uses TCP port 12345
 
-3. **文件路径**
-   - 不要移动或删除exe文件所在目录的其他文件
-   - data目录用于存储接收的文件
+3. **File Paths**
+   - Do not move or delete other files in exe directory
+   - data directory stores received files
 
-4. **杀毒软件**
-   - 某些杀毒软件可能会误报
-   - 如遇此问题，请将程序添加到白名单
+4. **Antivirus Software**
+   - Some antivirus software may show false positives
+   - Add program to whitelist if this occurs
 
-## 故障排除
+## Troubleshooting
 
-### 问题：无法连接到接收端
-解决方法：
-1. 检查两台电脑是否在同一局域网内
-2. 确认接收端服务器已启动
-3. 检查IP地址和端口是否正确
-4. 检查防火墙设置
+### Problem: Cannot connect to receiver
+Solution:
+1. Check both computers are on same LAN
+2. Confirm receiver server is started
+3. Verify IP address and port are correct
+4. Check firewall settings
 
-### 问题：传输中断
-解决方法：
-1. 检查网络连接是否稳定
-2. 重新启动程序并重试
-3. 确保没有其他程序占用端口12345
+### Problem: Transfer interrupted
+Solution:
+1. Check network connection stability
+2. Restart programs and try again
+3. Ensure no other programs use port 12345
 
-### 问题：程序无法启动
-解决方法：
-1. 确认Windows版本（需Windows 7或更高）
-2. 以管理员权限运行
-3. 安装Visual C++ Redistributable
+### Problem: Program won't start
+Solution:
+1. Confirm Windows version (Windows 7 or higher)
+2. Run as administrator
+3. Install Visual C++ Redistributable
 
-## 技术支持
+## Technical Support
 
-如有问题或建议，请联系开发者。
+For issues or suggestions, please contact developer.
 
-## 版权信息
+## Copyright
 
-Copyright © 2024 DeskTransfer
-本软件仅供学习和个人使用。
+Copyright (c) 2024 DeskTransfer
+This software is for learning and personal use only.
 """
-        
+
         readme_path = self.output_dir / 'README.txt'
         with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(readme_content)
-        self.log("创建README文件")
-        
+        self.log("Created README file")
+
     def copy_documentation(self):
-        """复制文档文件"""
-        docs = ['使用指南.md', 'USAGE.md']
+        """Copy documentation files"""
+        docs = ['Instructions.md', 'USAGE.md']
         for doc in docs:
             doc_path = self.root_dir / doc
             if doc_path.exists():
                 shutil.copy(doc_path, self.output_dir)
-                self.log(f"复制文档: {doc}")
-                
+                self.log(f"Copied documentation: {doc}")
+
     def create_portable_zip(self):
-        """创建便携版ZIP包"""
-        self.log("创建便携版ZIP包...")
-        
+        """Create portable ZIP package"""
+        self.log("Creating portable ZIP package...")
+
         zip_name = f'DeskTransfer_v{self.version}_Portable.zip'
         zip_path = self.dist_dir / zip_name
-        
+
         try:
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for root, dirs, files in os.walk(self.output_dir):
@@ -546,18 +546,18 @@ Copyright © 2024 DeskTransfer
                         file_path = Path(root) / file
                         arcname = file_path.relative_to(self.output_dir.parent)
                         zipf.write(file_path, arcname)
-                        
+
             file_size = zip_path.stat().st_size / (1024 * 1024)  # MB
-            self.log(f"ZIP包创建成功: {zip_name} ({file_size:.2f} MB)")
+            self.log(f"ZIP package created: {zip_name} ({file_size:.2f} MB)")
             return True
         except Exception as e:
-            self.log(f"创建ZIP包失败: {e}", "ERROR")
+            self.log(f"Failed to create ZIP package: {e}", "ERROR")
             return False
-            
+
     def create_installer_script(self):
-        """创建Inno Setup安装程序脚本"""
-        self.log("创建安装程序脚本...")
-        
+        """Create Inno Setup installer script"""
+        self.log("Creating installer script...")
+
         iss_content = f"""[Setup]
 AppName=DeskTransfer
 AppVersion={self.version}
@@ -573,7 +573,7 @@ UninstallDisplayIcon={{app}}\\DeskTransfer-Sender.exe
 WizardStyle=modern
 
 [Languages]
-Name: "chinese"; MessagesFile: "compiler:Languages\\ChineseSimplified.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{{cm:CreateDesktopIcon}}"; GroupDescription: "{{cm:AdditionalIcons}}"
@@ -582,109 +582,109 @@ Name: "desktopicon"; Description: "{{cm:CreateDesktopIcon}}"; GroupDescription: 
 Source: "DeskTransfer\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{{group}}\\DeskTransfer - 发送端"; Filename: "{{app}}\\DeskTransfer-Sender.exe"
-Name: "{{group}}\\DeskTransfer - 接收端"; Filename: "{{app}}\\DeskTransfer-Receiver.exe"
-Name: "{{group}}\\启动菜单"; Filename: "{{app}}\\start.bat"
-Name: "{{group}}\\接收文件夹"; Filename: "{{app}}\\data\\received"
+Name: "{{group}}\\DeskTransfer - Sender"; Filename: "{{app}}\\DeskTransfer-Sender.exe"
+Name: "{{group}}\\DeskTransfer - Receiver"; Filename: "{{app}}\\DeskTransfer-Receiver.exe"
+Name: "{{group}}\\Start Menu"; Filename: "{{app}}\\start.bat"
+Name: "{{group}}\\Received Folder"; Filename: "{{app}}\\data\\received"
 Name: "{{desktopicon}}\\DeskTransfer"; Filename: "{{app}}\\start.bat"; Tasks: desktopicon
 
 [Run]
 Filename: "{{app}}\\start.bat"; Description: "{{cm:LaunchProgram,DeskTransfer}}"; Flags: shellexec postinstall skipifsilent
 """
-        
+
         iss_path = self.output_dir / 'installer.iss'
         with open(iss_path, 'w', encoding='utf-8') as f:
             f.write(iss_content)
-        self.log("安装程序脚本创建成功: installer.iss")
-        self.log("提示: 使用Inno Setup编译此脚本可生成安装程序")
-        
+        self.log("Installer script created: installer.iss")
+        self.log("Note: Use Inno Setup to compile this script into an installer")
+
     def print_summary(self):
-        """打印构建摘要"""
+        """Print build summary"""
         print("\n" + "=" * 60)
-        print("构建完成摘要".center(60))
+        print("Build Summary".center(60))
         print("=" * 60)
-        
-        print(f"\n发布包位置: {self.output_dir}")
-        print("\n包含文件:")
-        
+
+        print(f"\nDistribution location: {self.output_dir}")
+        print("\nIncluded files:")
+
         sender_name = f"DeskTransfer-Sender{self.exe_suffix}"
         receiver_name = f"DeskTransfer-Receiver{self.exe_suffix}"
         start_name = f"start{self.script_suffix}"
 
         files = [
-            (sender_name, "发送端可执行文件"),
-            (receiver_name, "接收端可执行文件"),
-            (start_name, "启动菜单脚本"),
-            ("README.txt", "使用说明"),
-            ("data/", "数据目录"),
+            (sender_name, "Sender executable"),
+            (receiver_name, "Receiver executable"),
+            (start_name, "Start menu script"),
+            ("README.txt", "Instructions"),
+            ("data/", "Data directory"),
         ]
-        
+
         for filename, description in files:
             file_path = self.output_dir / filename
             if file_path.exists():
-                print(f"  ✓ {filename:<30} - {description}")
+                print(f"  ✅ {filename:<30} - {description}")
             else:
-                print(f"  ✗ {filename:<30} - {description} (缺失)")
-        
-        # 检查ZIP包
+                print(f"  ❌ {filename:<30} - {description} (missing)")
+
+        # Check ZIP package
         zip_name = f'DeskTransfer_v{self.version}_Portable.zip'
         zip_path = self.dist_dir / zip_name
         if zip_path.exists():
             file_size = zip_path.stat().st_size / (1024 * 1024)
-            print(f"\n便携版ZIP: {zip_name} ({file_size:.2f} MB)")
-        
+            print(f"\nPortable ZIP: {zip_name} ({file_size:.2f} MB)")
+
         print("\n" + "=" * 60)
-        print("\n下一步:")
-        print("  1. 测试可执行文件是否正常运行")
+        print("\nNext steps:")
+        print("  1. Test executables run properly")
         if self.platform == "windows":
-            print("  2. 将整个DeskTransfer目录复制到其他Windows电脑使用")
-            print(f"  3. 或使用便携版ZIP包: {zip_name}")
-            print("  4. 使用Inno Setup编译installer.iss创建安装程序")
+            print("  2. Copy entire DeskTransfer directory to other Windows computers")
+            print(f"  3. Or use portable ZIP package: {zip_name}")
+            print("  4. Use Inno Setup to compile installer.iss into installer")
         else:
             platform_name = "macOS" if self.platform == "darwin" else self.platform.title()
-            print(f"  2. 将整个DeskTransfer目录复制到其他{platform_name}电脑使用")
-            print(f"  3. 或使用便携版ZIP包: {zip_name}")
-            print("  4. 在其他平台上重新构建以获得对应版本")
+            print(f"  2. Copy entire DeskTransfer directory to other {platform_name} computers")
+            print(f"  3. Or use portable ZIP package: {zip_name}")
+            print("  4. Rebuild on other platforms to get corresponding versions")
         print("=" * 60 + "\n")
-        
+
     def build(self):
-        """执行完整的构建流程"""
+        """Execute complete build process"""
         print("\n" + "=" * 60)
         platform_name = "Windows" if self.platform == "windows" else ("macOS" if self.platform == "darwin" else self.platform.title())
-        print(f"DeskTransfer {platform_name}构建工具".center(60))
+        print(f"DeskTransfer {platform_name} Build Tool".center(60))
         print("=" * 60 + "\n")
-        
-        # 检查Python环境
+
+        # Check Python environment
         if not self.check_python():
             return 1
-            
-        # 安装依赖
+
+        # Install dependencies
         if not self.install_dependencies():
             return 1
-            
-        # 清理旧文件
+
+        # Clean old files
         self.clean_build()
-        
-        # 构建可执行文件
+
+        # Build executables
         if not self.build_executables():
             return 1
-            
-        # 创建发布包
+
+        # Create distribution package
         self.create_distribution_package()
-        
-        # 创建ZIP包
+
+        # Create ZIP package
         self.create_portable_zip()
-        
-        # 创建安装程序脚本
+
+        # Create installer script
         self.create_installer_script()
-        
-        # 打印摘要
+
+        # Print summary
         self.print_summary()
-        
+
         return 0
 
 def main():
-    """主函数"""
+    """Main function"""
     builder = DeskTransferBuilder()
     return builder.build()
 
