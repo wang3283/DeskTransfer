@@ -622,9 +622,9 @@ Filename: "{{app}}\\start.bat"; Description: "{{cm:LaunchProgram,DeskTransfer}}"
         for filename, description in files:
             file_path = self.output_dir / filename
             if file_path.exists():
-                print(f"  ✅ {filename:<30} - {description}")
+                print(f"  [OK] {filename:<30} - {description}")
             else:
-                print(f"  ❌ {filename:<30} - {description} (missing)")
+                print(f"  [MISSING] {filename:<30} - {description}")
 
         # Check ZIP package
         zip_name = f'DeskTransfer_v{self.version}_Portable.zip'
