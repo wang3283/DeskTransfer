@@ -1,0 +1,63 @@
+name: Build Windows Executables
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (optional)'
+        required: false
+        default: 'latest'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build executables
+      run: |
+        python build.py
+
+    - name: Create release archive
+      run: |
+        cd dist
+        Compress-Archive -Path "DeskTransfer\*" -DestinationPath "DeskTransfer_Windows_v${{ github.run_number }}.zip"
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: DeskTransfer-Windows
+        path: |
+          dist/DeskTransfer/
+          dist/DeskTransfer_v*.zip
+        retention-days: 30
+
+    - name: Create GitHub Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/DeskTransfer_v*.zip
+          dist/DeskTransfer/start.bat
+          dist/DeskTransfer/DeskTransfer-Sender.exe
+          dist/DeskTransfer/DeskTransfer-Receiver.exe
+          dist/DeskTransfer/README.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
